@@ -19,7 +19,7 @@
             letter-spacing: 5px;
             margin: 20px;
         }
-        #message {
+        #message, #guessedLettersDisplay {
             font-size: 20px;
             margin: 20px;
         }
@@ -30,6 +30,7 @@
         button {
             padding: 5px 10px;
             font-size: 16px;
+            cursor: pointer;
         }
         #gameContainer {
             display: none;
@@ -43,16 +44,17 @@
     <div id="gameContainer">
         <p>Guess the word by entering one letter at a time. You have 8 tries!</p>
         <p>Attempts left: <span id="attemptsLeft">8</span></p>
-        <canvas id="hangmanCanvas" width="300" height="300"></canvas>
+        <canvas id="hangmanCanvas" width="300" height="300" aria-label="Hangman drawing"></canvas>
         <p id="wordDisplay"></p>
-        <input type="text" id="letterInput" maxlength="1" placeholder="Enter a letter">
+        <p>Guessed letters: <span id="guessedLettersDisplay"></span></p>
+        <input type="text" id="letterInput" maxlength="1" placeholder="Enter a letter" aria-label="Guess a letter">
         <button onclick="guessLetter()">Guess</button>
         <p id="message"></p>
         <button onclick="startGameWithSound()" style="display: none;" id="restartButton">Play Again</button>
     </div>
 
-    <!-- Додаємо елемент audio для звуку -->
     <audio id="wrongSound" src="wrong.mp3"></audio>
+    <audio id="winSound" src="win.mp3"></audio>
 
     <script>
         const words = [
@@ -117,7 +119,7 @@
             "SUMMERS", "SUNRISE", "SUNSET", "SUPPLIES", "SUPPORT", "SUPPOSE", "SURFACE", "SURGEON", "SURPLUS", "SURVEY",
             "SURVIVE", "SUSPEND", "SUSTAIN", "SWALLOW", "SWIMMER", "SWITCH", "SYMBOLS", "SYSTEMS", "TABLETS", "TACKLES",
             "TACTICS", "TAILING", "TALENTS", "TALKING", "TANGENT", "TARGETS", "TASTING", "TEACHER", "TEACHES", "TEASING",
-            "TECHNIC", "TELLING", "TEMPERS", "TENDING", "TENSION", "TERRAIN", "TESTING", "TEXTURE", "THEATER", "THEMSEL",
+            "TECHNIC", "TELLING", "TEMPERS", "TENDING", "TENSION", "TERRAIN", "TESTING", "TEXTURE", "THEATER", "THEMSELVES",
             "THEORY", "THICKER", "THINNER", "THOUGHT", "THREADS", "THREATS", "THRILLS", "THRIVES", "THROATS", "THROUGH",
             "THROWER", "TICKETS", "TIGHTEN", "TILLING", "TIMINGS", "TISSUES", "TOBACCO", "TOGGLES", "TONIGHT", "TOOLING",
             "TOPICAL", "TOPPING", "TORCHES", "TOSSING", "TOUCHED", "TOUCHES", "TOURING", "TOURIST", "TOWARDS", "TRACING",
@@ -138,119 +140,93 @@
             "WRITTEN", "YARDAGE", "YELLING", "YIELDED", "YOUNGER", "YOURSELF", "ZEALOUS", "ZESTFUL", "ZIGZAGS", "ZIPPERS",
             "ZOMBIES", "ZOOLOGY"
         ];
+
         let secretWord = "";
         let guessedLetters = [];
         let attemptsLeft = 8;
         let wordDisplay = [];
 
-        // Отримуємо елемент audio
-        const wrongSound = document.getElementById("wrongSound");
+        const elements = {
+            gameContainer: document.getElementById("gameContainer"),
+            wordDisplay: document.getElementById("wordDisplay"),
+            attemptsLeft: document.getElementById("attemptsLeft"),
+            message: document.getElementById("message"),
+            letterInput: document.getElementById("letterInput"),
+            restartButton: document.getElementById("restartButton"),
+            guessedLettersDisplay: document.getElementById("guessedLettersDisplay"),
+            startButton: document.querySelector("button[onclick='startGameWithSound()']")
+        };
 
-        // Налаштування canvas для малювання шибениці
+        const sounds = {
+            wrong: document.getElementById("wrongSound"),
+            win: document.getElementById("winSound")
+        };
+
         const canvas = document.getElementById("hangmanCanvas");
         const ctx = canvas.getContext("2d");
 
-        // Функція для малювання шибениці поетапно (8 етапів)
         function drawHangman(incorrectGuesses) {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.strokeStyle = "#000";
             ctx.lineWidth = 3;
 
-            if (incorrectGuesses >= 1) {
-                ctx.beginPath();
-                ctx.moveTo(50, 270);
-                ctx.lineTo(250, 270);
-                ctx.stroke();
-            }
-            if (incorrectGuesses >= 2) {
-                ctx.beginPath();
-                ctx.moveTo(150, 270);
-                ctx.lineTo(150, 50);
-                ctx.stroke();
-            }
-            if (incorrectGuesses >= 3) {
-                ctx.beginPath();
-                ctx.moveTo(150, 50);
-                ctx.lineTo(220, 50);
-                ctx.stroke();
-            }
-            if (incorrectGuesses >= 4) {
-                ctx.beginPath();
-                ctx.moveTo(220, 50);
-                ctx.lineTo(220, 80);
-                ctx.stroke();
-            }
-            if (incorrectGuesses >= 5) {
-                ctx.beginPath();
-                ctx.arc(220, 110, 30, 0, Math.PI * 2);
-                ctx.stroke();
-            }
-            if (incorrectGuesses >= 6) {
-                ctx.beginPath();
-                ctx.moveTo(220, 140);
-                ctx.lineTo(220, 200);
-                ctx.stroke();
-            }
+            if (incorrectGuesses >= 1) { ctx.beginPath(); ctx.moveTo(50, 270); ctx.lineTo(250, 270); ctx.stroke(); }
+            if (incorrectGuesses >= 2) { ctx.beginPath(); ctx.moveTo(150, 270); ctx.lineTo(150, 50); ctx.stroke(); }
+            if (incorrectGuesses >= 3) { ctx.beginPath(); ctx.moveTo(150, 50); ctx.lineTo(220, 50); ctx.stroke(); }
+            if (incorrectGuesses >= 4) { ctx.beginPath(); ctx.moveTo(220, 50); ctx.lineTo(220, 80); ctx.stroke(); }
+            if (incorrectGuesses >= 5) { ctx.beginPath(); ctx.arc(220, 110, 30, 0, Math.PI * 2); ctx.stroke(); }
+            if (incorrectGuesses >= 6) { ctx.beginPath(); ctx.moveTo(220, 140); ctx.lineTo(220, 200); ctx.stroke(); }
             if (incorrectGuesses >= 7) {
-                ctx.beginPath();
-                ctx.moveTo(220, 150);
-                ctx.lineTo(190, 180);
-                ctx.stroke();
-                ctx.beginPath();
-                ctx.moveTo(220, 150);
-                ctx.lineTo(250, 180);
-                ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(220, 150); ctx.lineTo(190, 180); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(220, 150); ctx.lineTo(250, 180); ctx.stroke();
             }
             if (incorrectGuesses >= 8) {
-                ctx.beginPath();
-                ctx.moveTo(220, 200);
-                ctx.lineTo(190, 230);
-                ctx.stroke();
-                ctx.beginPath();
-                ctx.moveTo(220, 200);
-                ctx.lineTo(250, 230);
-                ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(220, 200); ctx.lineTo(190, 230); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(220, 200); ctx.lineTo(250, 230); ctx.stroke();
             }
         }
 
-        // Функція для початку гри
         function startGame() {
             secretWord = words[Math.floor(Math.random() * words.length)];
             guessedLetters = [];
             attemptsLeft = 8;
             wordDisplay = Array(secretWord.length).fill("_");
 
-            document.getElementById("wordDisplay").textContent = wordDisplay.join(" ");
-            document.getElementById("attemptsLeft").textContent = attemptsLeft;
-            document.getElementById("message").textContent = "";
-            document.getElementById("letterInput").value = "";
-            document.getElementById("restartButton").style.display = "none";
+            elements.wordDisplay.textContent = wordDisplay.join(" ");
+            elements.attemptsLeft.textContent = attemptsLeft;
+            elements.message.textContent = "";
+            elements.guessedLettersDisplay.textContent = "";
+            elements.letterInput.value = "";
+            elements.letterInput.disabled = false;
+            document.querySelector("button[onclick='guessLetter()']").disabled = false;
+            elements.restartButton.style.display = "none";
 
             drawHangman(0);
+            elements.letterInput.focus();
         }
 
-        // Функція для початку гри з розблокуванням звуку
         function startGameWithSound() {
-            document.getElementById("gameContainer").style.display = "block";
-            document.querySelector("button[onclick='startGameWithSound()']").style.display = "none";
+            elements.gameContainer.style.display = "block";
+            elements.startButton.style.display = "none";
             startGame();
         }
 
-        // Функція для перевірки введеної літери
         function guessLetter() {
-            let letter = document.getElementById("letterInput").value.toUpperCase();
+            const letter = elements.letterInput.value.toUpperCase();
             if (letter.length !== 1 || !/[A-Z]/.test(letter)) {
-                document.getElementById("message").textContent = "Please enter a single letter (A-Z)!";
+                elements.message.textContent = "Please enter a single letter (A-Z)!";
                 return;
             }
 
             if (guessedLetters.includes(letter)) {
-                document.getElementById("message").textContent = "You already guessed that letter!";
-                document.getElementById("letterInput").value = "";
+                elements.message.textContent = "You already guessed that letter!";
+                elements.letterInput.value = "";
+                elements.letterInput.focus();
                 return;
             }
 
             guessedLetters.push(letter);
+            elements.guessedLettersDisplay.textContent = guessedLetters.join(", ");
 
             let letterFound = false;
             for (let i = 0; i < secretWord.length; i++) {
@@ -262,37 +238,43 @@
 
             if (!letterFound) {
                 attemptsLeft--;
-                document.getElementById("attemptsLeft").textContent = attemptsLeft;
+                elements.attemptsLeft.textContent = attemptsLeft;
                 drawHangman(8 - attemptsLeft);
-                // Відтворюємо звук при неправильній літері
-                wrongSound.currentTime = 0;
-                wrongSound.play().catch(error => {
-                    console.log("Error playing sound:", error);
+                sounds.wrong.currentTime = 0;
+                sounds.wrong.play().catch(() => {
+                    elements.message.textContent = "Sound unavailable, but game continues!";
                 });
             }
 
-            document.getElementById("wordDisplay").textContent = wordDisplay.join(" ");
+            elements.wordDisplay.textContent = wordDisplay.join(" ");
 
             if (wordDisplay.join("") === secretWord) {
-                document.getElementById("message").textContent = "You win! The word was " + secretWord;
+                elements.message.textContent = "You win! The word was " + secretWord;
+                sounds.win.currentTime = 0;
+                sounds.win.play().catch(() => {});
                 endGame();
             } else if (attemptsLeft === 0) {
-                document.getElementById("message").textContent = "Game over! The word was " + secretWord;
+                elements.message.textContent = "Game over! The word was " + secretWord;
                 endGame();
             }
 
-            document.getElementById("letterInput").value = "";
+            elements.letterInput.value = "";
+            elements.letterInput.focus();
         }
 
-        // Функція для завершення гри
         function endGame() {
-            document.getElementById("letterInput").disabled = true;
+            elements.letterInput.disabled = true;
             document.querySelector("button[onclick='guessLetter()']").disabled = true;
-            document.getElementById("restartButton").style.display = "block";
+            elements.restartButton.style.display = "block";
         }
 
-        // Початково ховаємо гру
-        document.getElementById("gameContainer").style.display = "none";
+        elements.letterInput.addEventListener("keypress", (event) => {
+            if (event.key === "Enter") {
+                guessLetter();
+            }
+        });
+
+        elements.gameContainer.style.display = "none";
     </script>
 </body>
 </html>
