@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Hangman Game</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin-top: 20px;
+        }
+        #hangmanCanvas {
+            border: 1px solid black;
+            margin: 20px auto;
+            display: block;
+        }
+        #wordDisplay {
+            font-size: 30px;
+            letter-spacing: 5px;
+            margin: 20px;
+        }
+        #message {
+            font-size: 20px;
+            margin: 20px;
+        }
+        input {
+            padding: 5px;
+            font-size: 16px;
+        }
+        button {
+            padding: 5px 10px;
+            font-size: 16px;
+        }
+        #gameContainer {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>Hangman Game</h1>
+    <button onclick="startGameWithSound()">Start Game</button>
+
+    <div id="gameContainer">
+        <p>Guess the word by entering one letter at a time. You have 8 tries!</p>
+        <p>Attempts left: <span id="attemptsLeft">8</span></p>
+        <canvas id="hangmanCanvas" width="300" height="300"></canvas>
+        <p id="wordDisplay"></p>
+        <input type="text" id="letterInput" maxlength="1" placeholder="Enter a letter">
+        <button onclick="guessLetter()">Guess</button>
+        <p id="message"></p>
+        <button onclick="startGameWithSound()" style="display: none;" id="restartButton">Play Again</button>
+    </div>
+
+    <!-- Додаємо елемент audio для звуку -->
+    <audio id="wrongSound" src="wrong.mp3"></audio>
+
+    <script>
+        const words = [
+            "ACCEPTS", "ACTIONS", "ADAPTED", "ADDRESS", "ADVISER", "AFFECTS", "ALLOWED", "AMENDED", "ANCIENT", "ANOTHER",
+            "APPEARS", "APPLIED", "ARRIVAL", "ARTICLE", "ASPECTS", "ASSUMED", "ATTENDS", "AVERAGE", "BALANCE", "BECAUSE",
+            "BECOMES", "BELIEVE", "BENEFIT", "BETWEEN", "BILLION", "BROTHER", "BUILDER", "CALLING", "CAPABLE", "CAPITAL",
+            "CAPTURE", "CARRIED", "CAUSING", "CENTERS", "CENTURY", "CERTAIN", "CHAMBER", "CHANGES", "CHAPTER", "CHARITY",
+            "CHECKED", "CHOICES", "CIRCUIT", "CLASSES", "CLEANER", "CLOSURE", "COLLECT", "COMFORT", "COMMAND", "COMMENT",
+            "COMMITS", "COMPANY", "COMPOSE", "CONCERN", "CONDUCT", "CONFIRM", "CONNECT", "CONSENT", "CONSULT", "CONTACT",
+            "CONTAIN", "CONTENT", "CONTROL", "COPYING", "CORRECT", "COSTING", "COUNCIL", "COUNTRY", "COVERED", "CREATED",
+            "CREDITS", "CRUCIAL", "CURRENT", "CUTTING", "DAMAGED", "DANCING", "DEALING", "DECIDED", "DEFENCE", "DEFENDS",
+            "DEGREES", "DEMANDS", "DEPENDS", "DESERVE", "DESIGNS", "DESIRED", "DETAILS", "DEVELOP", "DIFFERS", "DIGITAL",
+            "DIRECTS", "DISPLAY", "DIVIDED", "DRAWING", "DRIVERS", "DROPPED", "DURABLE", "DUTYFUL", "EARNING", "EDITING",
+            "EFFECTS", "EFFORTS", "ELECTED", "EMOTION", "ENABLED", "ENHANCE", "ENJOYED", "ENSURED", "ENTERED", "ENTITLE",
+            "EQUALLY", "ESCAPED", "EVENING", "EXACTLY", "EXAMINE", "EXCITED", "EXCLUDE", "EXHIBIT", "EXISTED", "EXPANDS",
+            "EXPECTS", "EXPLAIN", "EXPLORE", "EXPOSED", "EXTENDS", "FACTORS", "FACTORY", "FAILING", "FAMILIES", "FARMING",
+            "FASHION", "FEATURE", "FEDERAL", "FEELING", "FIGHTER", "FIGURES", "FILLING", "FINANCE", "FINDING", "FISHING",
+            "FITNESS", "FLAVOUR", "FLOWERS", "FOCUSED", "FOLLOWS", "FOREIGN", "FOREVER", "FORMING", "FORWARD", "FOUNDED",
+            "FREEDOM", "FRIENDS", "FUNDING", "FURTHER", "GALLERY", "GARDENS", "GENERAL", "GENETIC", "GENUINE", "GETTING",
+            "GLASSES", "GOVERNS", "GRANTED", "GREATER", "GROWING", "GUARDED", "GUIDING", "HANDLES", "HAPPENS", "HARMFUL",
+            "HARVEST", "HEADING", "HEALTHY", "HEARING", "HELPFUL", "HELPING", "HIGHEST", "HISTORY", "HOLDING", "HOLIDAY",
+            "HONESTY", "HONOURS", "HUNTING", "HURTING", "IDEALLY", "IMAGINE", "IMPACTS", "IMPLIED", "IMPOSES", "IMPROVE",
+            "INCLUDE", "INCOMES", "INDEXES", "INDUCED", "INFANTS", "INFORMS", "INITIAL", "INJURED", "INSIGHT", "INSISTS",
+            "INSPECT", "INSPIRE", "INSTALL", "INSTANT", "INSURED", "INTENDS", "INTEREST", "INVITED", "INVOLVE", "ISLANDS",
+            "JOINING", "JOURNEY", "JUDGING", "JUSTICE", "KEEPING", "KILLING", "KINGDOM", "KNOWING", "LABELED", "LACKING",
+            "LANDING", "LARGEST", "LASTING", "LAUNDRY", "LEADERS", "LEADING", "LEARNED", "LEAVING", "LECTURE", "LEGALLY",
+            "LENDING", "LENGTHY", "LESSONS", "LETTERS", "LEVELS", "LIBERAL", "LIBRARY", "LICENSE", "LIFTING", "LIGHTER",
+            "LIMITED", "LINKING", "LISTENS", "LITTLER", "LOADING", "LOCALLY", "LOCATED", "LOCKING", "LODGING", "LONGEST",
+            "LOOKING", "LOWEST", "LOYALTY", "MACHINE", "MAILING", "MANAGED", "MANAGER", "MANNERS", "MARKETS", "MARRIED",
+            "MATCHES", "MATTERS", "MAXIMUM", "MEANING", "MEASURE", "MEDICAL", "MEETING", "MEMBERS", "MENTION", "METHODS",
+            "MILLION", "MINIMUM", "MINUTES", "MISSING", "MISSION", "MISTAKE", "MIXTURE", "MODELS", "MODERN", "MODULES",
+            "MOMENTS", "MONITOR", "MONTHLY", "MORNING", "MOTIONS", "MOUNTER", "MOVABLE", "MUSCLES", "MUSEUMS", "MUSICAL",
+            "MUTUAL", "NATIONS", "NATURAL", "NEAREST", "NEEDING", "NETWORK", "NEUTRAL", "NOTABLE", "NOTHING", "NOTICED",
+            "NOVELTY", "NUMBERS", "OBJECTS", "OBSERVE", "OBTAINS", "OCCUPYS", "OFFERED", "OFFICER", "OFFICES", "ONGOING",
+            "OPENING", "OPERATE", "OPINION", "OPTIONS", "ORDERED", "ORGANIC", "OUTCOME", "OUTDOOR", "OUTLINE", "OUTPUTS",
+            "OVERALL", "OWNERS", "PACKAGE", "PACKING", "PAINTED", "PARENTS", "PARTIES", "PARTNER", "PASSAGE", "PASSING",
+            "PATIENT", "PATTERN", "PAYMENT", "PENSION", "PEOPLES", "PERCENT", "PERFECT", "PERFORM", "PERIODS", "PERMITS",
+            "PERSONS", "PICKING", "PICTURE", "PLACING", "PLANNED", "PLANTED", "PLAYERS", "PLAYING", "PLEASED", "PLEDGED",
+            "PLOTTED", "POCKETS", "POINTED", "POLICYS", "POPULAR", "PORTION", "POSSESS", "POSTING", "POWDER", "POWERED",
+            "PRACTICE", "PRAYERS", "PREFERS", "PREPARE", "PRESENT", "PRESSES", "PREVENT", "PRICING", "PRIMARY", "PRINTED",
+            "PRISONS", "PRIVATE", "PROBLEM", "PROCESS", "PRODUCE", "PRODUCT", "PROFITS", "PROGRAM", "PROJECT", "PROMISE",
+            "PROMOTE", "PROTECT", "PROTEST", "PROVIDE", "PUBLISH", "PULLING", "PURPOSE", "PUSHING", "QUALIFY", "QUALITY",
+            "QUARTER", "QUICKLY", "QUIETLY", "RAISING", "RANGING", "RANKING", "REACHED", "READERS", "READING", "REALITY",
+            "REALIZE", "REASONS", "RECEIVE", "RECIPE", "RECORDS", "RECOVER", "REDUCED", "REFEREE", "REFLECT", "REFORMS",
+            "REFUSED", "REGARDS", "REGIONS", "REGULAR", "RELATED", "RELEASE", "REMAINS", "REMOVED", "REPAIRS", "REPEATS",
+            "REPLACE", "REPLIED", "REPORTS", "REQUEST", "REQUIRE", "RESERVE", "RESIDUE", "RESOLVE", "RESPECT", "RESTORE",
+            "RESULTS", "RESUMED", "RETAINS", "RETIRE", "RETREAT", "RETURNS", "REVEALS", "REVENUE", "REVIEWS", "REVISED",
+            "REWARD", "RHYTHMS", "RIBBONS", "RICHEST", "RIDING", "RIGHTS", "RISKING", "RITUALS", "RIVALS", "ROAMING",
+            "ROLLING", "ROUNDED", "ROUTING", "RULINGS", "RUNNING", "SADNESS", "SAMPLES", "SAVINGS", "SCANNED", "SCATTER",
+            "SCHEMES", "SCHOLAR", "SCHOOLS", "SCIENCE", "SCORING", "SCREENS", "SCRIPTS", "SEALING", "SEASONS", "SEATING",
+            "SECONDS", "SECTION", "SECTORS", "SECURED", "SEEKING", "SEGMENT", "SELECTS", "SELLERS", "SELLING", "SENDING",
+            "SENATOR", "SENDING", "SENSING", "SERIOUS", "SERVANT", "SERVICE", "SESSION", "SETTING", "SETTLED", "SEVERAL",
+            "SHADOWS", "SHAPING", "SHARING", "SHELTER", "SHIELDS", "SHIFTED", "SHINING", "SHIPPED", "SHOOTER", "SHOPPER",
+            "SHORTLY", "SHOWING", "SIGNALS", "SILENCE", "SIMILAR", "SINGERS", "SINGING", "SINKING", "SISTERS", "SITTING",
+            "SIZABLE", "SKILLED", "SLIDING", "SLOWING", "SMALLER", "SMILING", "SMOKING", "SOCIETY", "SOLDIER", "SOLIDLY",
+            "SOLVING", "SOURCES", "SPACIAL", "SPARED", "SPEAKER", "SPECIAL", "SPECIES", "SPEECH", "SPEEDUP", "SPENDER",
+            "SPINACH", "SPIRITS", "SPOILED", "SPONSOR", "SPREADS", "SPRINGS", "SQUARES", "STABLE", "STAGING", "STAMINA",
+            "STAMPED", "STANDBY", "STARING", "STARTED", "STARTER", "STATING", "STATION", "STATUES", "STAYING", "STEADY",
+            "STEPSON", "STIMULI", "STOCKED", "STORAGE", "STORIES", "STORMED", "STRAINS", "STRANDS", "STREETS", "STRETCH",
+            "STRIKES", "STRINGS", "STRIPES", "STROKES", "STUDENT", "STUDIES", "STUFFED", "STUMBLE", "SUBJECT", "SUBMITS",
+            "SUBSIDE", "SUBTLE", "SUCCEED", "SUCCESS", "SUCKING", "SUDDEN", "SUFFERS", "SUGGEST", "SUITING", "SUMMARY",
+            "SUMMERS", "SUNRISE", "SUNSET", "SUPPLIES", "SUPPORT", "SUPPOSE", "SURFACE", "SURGEON", "SURPLUS", "SURVEY",
+            "SURVIVE", "SUSPEND", "SUSTAIN", "SWALLOW", "SWIMMER", "SWITCH", "SYMBOLS", "SYSTEMS", "TABLETS", "TACKLES",
+            "TACTICS", "TAILING", "TALENTS", "TALKING", "TANGENT", "TARGETS", "TASTING", "TEACHER", "TEACHES", "TEASING",
+            "TECHNIC", "TELLING", "TEMPERS", "TENDING", "TENSION", "TERRAIN", "TESTING", "TEXTURE", "THEATER", "THEMSEL",
+            "THEORY", "THICKER", "THINNER", "THOUGHT", "THREADS", "THREATS", "THRILLS", "THRIVES", "THROATS", "THROUGH",
+            "THROWER", "TICKETS", "TIGHTEN", "TILLING", "TIMINGS", "TISSUES", "TOBACCO", "TOGGLES", "TONIGHT", "TOOLING",
+            "TOPICAL", "TOPPING", "TORCHES", "TOSSING", "TOUCHED", "TOUCHES", "TOURING", "TOURIST", "TOWARDS", "TRACING",
+            "TRACKER", "TRACTOR", "TRADING", "TRAFFIC", "TRAILER", "TRAINED", "TRAINER", "TRANSIT", "TRAVELS", "TREATED",
+            "TREND", "TRIALS", "TRIBUNE", "TRICKED", "TRIGGER", "TRIMMED", "TRIPLES", "TROOPER", "TROUBLE", "TRUCKER",
+            "TRUMPET", "TRUSTED", "TRYING", "TUNNELS", "TURNING", "TUTORIAL", "TWEETED", "TWINS", "TWISTED", "TYPICAL",
+            "UNABLE", "UNCLEAR", "UNCOVER", "UNDERGO", "UNIFORM", "UNKNOWN", "UNLIKES", "UNLOADS", "UNLOCKS", "UNPACKS",
+            "UNUSUAL", "UPDATES", "UPGRADE", "UPRIGHT", "UPSIDES", "URBAN", "URGENCY", "USEFUL", "USUALLY", "UTILITY",
+            "VACANCY", "VACUUMS", "VAGUELY", "VALIDLY", "VALUING", "VANDALS", "VARIETY", "VARYING", "VASTLY", "VEHICLE",
+            "VENTURE", "VERDICT", "VERSION", "VESSELS", "VETERAN", "VICTIMS", "VICTORY", "VIEWERS", "VIEWING", "VILLAGE",
+            "VIOLATE", "VIRGINS", "VIRTUAL", "VISIONS", "VISITED", "VISITOR", "VISUALS", "VITAMIN", "VOICING", "VOLUMES",
+            "VOTING", "WALKERS", "WALKING", "WALLING", "WANTING", "WARMING", "WARNING", "WASHING", "WASTING", "WATCHED",
+            "WATCHER", "WATCHES", "WATERS", "WAVING", "WEALTHY", "WEAPONS", "WEARING", "WEATHER", "WEBCAST", "WEBSITE",
+            "WEDDING", "WEEKEND", "WEIGHTS", "WELCOME", "WELFARE", "WESTERN", "WETLAND", "WHATEVER", "WHEELED", "WHEREAS",
+            "WHEREIN", "WHETHER", "WHISTLE", "WICKETS", "WIDENED", "WIDOWER", "WILDEST", "WILLING", "WINDOWS", "WINDING",
+            "WINNERS", "WINNING", "WINTERS", "WISHING", "WITHDRAW", "WITHIN", "WITHOUT", "WITNESS", "WONDERS", "WORKERS",
+            "WORKING", "WORKOUT", "WORRIED", "WORSHIP", "WOUNDED", "WRAPPED", "WRAPPER", "WRESTLE", "WRITERS", "WRITING",
+            "WRITTEN", "YARDAGE", "YELLING", "YIELDED", "YOUNGER", "YOURSELF", "ZEALOUS", "ZESTFUL", "ZIGZAGS", "ZIPPERS",
+            "ZOMBIES", "ZOOLOGY"
+        ];
+        let secretWord = "";
+        let guessedLetters = [];
+        let attemptsLeft = 8;
+        let wordDisplay = [];
+
+        // Отримуємо елемент audio
+        const wrongSound = document.getElementById("wrongSound");
+
+        // Налаштування canvas для малювання шибениці
+        const canvas = document.getElementById("hangmanCanvas");
+        const ctx = canvas.getContext("2d");
+
+        // Функція для малювання шибениці поетапно (8 етапів)
+        function drawHangman(incorrectGuesses) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.strokeStyle = "#000";
+            ctx.lineWidth = 3;
+
+            if (incorrectGuesses >= 1) {
+                ctx.beginPath();
+                ctx.moveTo(50, 270);
+                ctx.lineTo(250, 270);
+                ctx.stroke();
+            }
+            if (incorrectGuesses >= 2) {
+                ctx.beginPath();
+                ctx.moveTo(150, 270);
+                ctx.lineTo(150, 50);
+                ctx.stroke();
+            }
+            if (incorrectGuesses >= 3) {
+                ctx.beginPath();
+                ctx.moveTo(150, 50);
+                ctx.lineTo(220, 50);
+                ctx.stroke();
+            }
+            if (incorrectGuesses >= 4) {
+                ctx.beginPath();
+                ctx.moveTo(220, 50);
+                ctx.lineTo(220, 80);
+                ctx.stroke();
+            }
+            if (incorrectGuesses >= 5) {
+                ctx.beginPath();
+                ctx.arc(220, 110, 30, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+            if (incorrectGuesses >= 6) {
+                ctx.beginPath();
+                ctx.moveTo(220, 140);
+                ctx.lineTo(220, 200);
+                ctx.stroke();
+            }
+            if (incorrectGuesses >= 7) {
+                ctx.beginPath();
+                ctx.moveTo(220, 150);
+                ctx.lineTo(190, 180);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(220, 150);
+                ctx.lineTo(250, 180);
+                ctx.stroke();
+            }
+            if (incorrectGuesses >= 8) {
+                ctx.beginPath();
+                ctx.moveTo(220, 200);
+                ctx.lineTo(190, 230);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(220, 200);
+                ctx.lineTo(250, 230);
+                ctx.stroke();
+            }
+        }
+
+        // Функція для початку гри
+        function startGame() {
+            secretWord = words[Math.floor(Math.random() * words.length)];
+            guessedLetters = [];
+            attemptsLeft = 8;
+            wordDisplay = Array(secretWord.length).fill("_");
+
+            document.getElementById("wordDisplay").textContent = wordDisplay.join(" ");
+            document.getElementById("attemptsLeft").textContent = attemptsLeft;
+            document.getElementById("message").textContent = "";
+            document.getElementById("letterInput").value = "";
+            document.getElementById("restartButton").style.display = "none";
+
+            drawHangman(0);
+        }
+
+        // Функція для початку гри з розблокуванням звуку
+        function startGameWithSound() {
+            document.getElementById("gameContainer").style.display = "block";
+            document.querySelector("button[onclick='startGameWithSound()']").style.display = "none";
+            startGame();
+        }
+
+        // Функція для перевірки введеної літери
+        function guessLetter() {
+            let letter = document.getElementById("letterInput").value.toUpperCase();
+            if (letter.length !== 1 || !/[A-Z]/.test(letter)) {
+                document.getElementById("message").textContent = "Please enter a single letter (A-Z)!";
+                return;
+            }
+
+            if (guessedLetters.includes(letter)) {
+                document.getElementById("message").textContent = "You already guessed that letter!";
+                document.getElementById("letterInput").value = "";
+                return;
+            }
+
+            guessedLetters.push(letter);
+
+            let letterFound = false;
+            for (let i = 0; i < secretWord.length; i++) {
+                if (secretWord[i] === letter) {
+                    wordDisplay[i] = letter;
+                    letterFound = true;
+                }
+            }
+
+            if (!letterFound) {
+                attemptsLeft--;
+                document.getElementById("attemptsLeft").textContent = attemptsLeft;
+                drawHangman(8 - attemptsLeft);
+                // Відтворюємо звук при неправильній літері
+                wrongSound.currentTime = 0;
+                wrongSound.play().catch(error => {
+                    console.log("Error playing sound:", error);
+                });
+            }
+
+            document.getElementById("wordDisplay").textContent = wordDisplay.join(" ");
+
+            if (wordDisplay.join("") === secretWord) {
+                document.getElementById("message").textContent = "You win! The word was " + secretWord;
+                endGame();
+            } else if (attemptsLeft === 0) {
+                document.getElementById("message").textContent = "Game over! The word was " + secretWord;
+                endGame();
+            }
+
+            document.getElementById("letterInput").value = "";
+        }
+
+        // Функція для завершення гри
+        function endGame() {
+            document.getElementById("letterInput").disabled = true;
+            document.querySelector("button[onclick='guessLetter()']").disabled = true;
+            document.getElementById("restartButton").style.display = "block";
+        }
+
+        // Початково ховаємо гру
+        document.getElementById("gameContainer").style.display = "none";
+    </script>
+</body>
+</html>
