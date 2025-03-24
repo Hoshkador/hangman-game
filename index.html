@@ -241,9 +241,9 @@
                 elements.attemptsLeft.textContent = attemptsLeft;
                 drawHangman(8 - attemptsLeft);
                 sounds.wrong.currentTime = 0;
-                sounds.wrong.play().catch(() => {
-                    elements.message.textContent = "Sound unavailable, but game continues!";
-                });
+                sounds.wrong.play().catch((error) => {
+    elements.message.textContent = "Sound error: " + error.message;
+});
             }
 
             elements.wordDisplay.textContent = wordDisplay.join(" ");
